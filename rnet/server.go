@@ -23,7 +23,7 @@ func (s *Server) Start() {
 	fmt.Printf("[Start] Server Listener at %s:%d\n", s.IP, s.Port)
 	go func() {
 		// 一、获取服务器套接字(ip:port)
-		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("s%:%d", s.IP, s.Port))
+		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
 		if err != nil {
 			fmt.Println("获取套接字失败(addr获取失败)", err)
 			return
@@ -54,7 +54,9 @@ func (s *Server) Start() {
 						fmt.Println("读缓冲区失败(从客户端连接读取字节数据失败)", err)
 						continue
 					}
+					fmt.Println("接受到来自客户端的数据： ", string(readBuf))
 					// 成功读取数据后执行业务逻辑
+					copy(writeBuf, readBuf[:count])
 					if _, err := conn.Write(writeBuf[:count]); err != nil {
 						fmt.Println("写缓冲区失败(发送给客户端数据失败)", err)
 						continue
