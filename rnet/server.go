@@ -2,6 +2,7 @@ package rnet
 
 import (
 	"Rinx/riface"
+	"errors"
 	"fmt"
 	"net"
 )
@@ -16,6 +17,16 @@ type Server struct {
 	IP string
 	// 服务器监听的端口
 	Port int
+}
+
+// TODO 客户端连接所绑定的处理方法(先写死，后面再修改)
+func CallbackFun(conn *net.TCPConn, data []byte, count int) error {
+	fmt.Println("[conn handler]--CallbackFun...")
+	if _, err := conn.Write(data[:count]); err != nil {
+		fmt.Println("发送数据失败...", err)
+		return errors.New("CallbackFun err...")
+	}
+	return nil
 }
 
 // 开启
@@ -35,6 +46,8 @@ func (s *Server) Start() {
 			return
 		}
 		// 三、阻塞等待客户端连接，执行任务
+		var connId uint32
+		connId = 0
 		for {
 			// 接收客户端连接
 			conn, err := tcpListener.AcceptTCP()
@@ -42,29 +55,11 @@ func (s *Server) Start() {
 				fmt.Println("连接客户端失败", err)
 				continue
 			}
-			// 客户端连接服务端成功，服务端开始执行任务并返回给客户端
-			// TODO
-			go func() {
-				for {
-					// 暂时执行回显
-					readBuf := make([]byte, 512)
-					writeBuf := make([]byte, 512)
-					count, err := conn.Read(readBuf) // 读取字节放入buf中，并返回读取成功的字节数
-					if err != nil {
-						fmt.Println("读缓冲区失败(从客户端连接读取字节数据失败)", err)
-						continue
-					}
-					fmt.Println("接受到来自客户端的数据： ", string(readBuf))
-					// 成功读取数据后执行业务逻辑
-					copy(writeBuf, readBuf[:count])
-					if _, err := conn.Write(writeBuf[:count]); err != nil {
-						fmt.Println("写缓冲区失败(发送给客户端数据失败)", err)
-						continue
-					}
-
-				}
-
-			}()
+			// 将监听到的TCP连接封装到自己构建的连接模块中，便于调用不同的业务方法
+			dealconn := NewConnection(conn, connId, CallbackFun)
+			connId++
+			// 开启协程进行业务处理
+			go dealconn.Start()
 		}
 	}()
 
