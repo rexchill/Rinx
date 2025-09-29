@@ -2,6 +2,7 @@ package rnet
 
 import (
 	"Rinx/riface"
+	"Rinx/utils"
 	"fmt"
 	"net"
 )
@@ -22,7 +23,11 @@ type Server struct {
 
 // 开启
 func (s *Server) Start() {
-	fmt.Printf("[Start] Server Listener at %s:%d\n", s.IP, s.Port)
+	fmt.Printf("[START] Server name: %s,listenner at IP: %s, Port %d is starting\n", s.Name, s.IP, s.Port)
+	fmt.Printf("[Rinx] Version: %s, MaxConnection: %d,  MaxPacketSize: %d\n",
+		utils.Config.Version,
+		utils.Config.MaxConnection,
+		utils.Config.MaxPacketSize)
 	go func() {
 		// 一、获取服务器套接字(ip:port)
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
@@ -80,10 +85,10 @@ func (s *Server) AddRouter(router riface.IRouter) {
 // 新建Server实现
 func NewServer(name string) riface.IServer {
 	newServer := &Server{
-		Name:      name,
+		Name:      utils.Config.Name,
 		IPVersion: "tcp4",
-		IP:        "0.0.0.0",
-		Port:      19991,
+		IP:        utils.Config.Host,
+		Port:      utils.Config.Port,
 		Router:    nil,
 	}
 	return newServer

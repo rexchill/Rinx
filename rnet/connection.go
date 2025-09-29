@@ -2,6 +2,7 @@ package rnet
 
 import (
 	"Rinx/riface"
+	"Rinx/utils"
 	"fmt"
 	"net"
 )
@@ -43,7 +44,7 @@ func (conn *Connection) StartReader() {
 
 	// 开始处理业务
 	for {
-		buf := make([]byte, 512)
+		buf := make([]byte, utils.Config.MaxPacketSize)
 		_, err := conn.conn.Read(buf)
 		if err != nil {
 			fmt.Println("读取数据失败...", err)
