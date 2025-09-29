@@ -19,20 +19,20 @@ type Connection struct {
 	isClosed bool
 
 	// 当前连接所要执行的业务方法
-	handleAPI riface.HandleFunc
+	router riface.IRouter
 
 	// 用于通知当前连接已经退出的 channel
 	ExitChan chan struct{}
 }
 
 // NewConnection 初始化连接模块
-func NewConnection(conn *net.TCPConn, connID uint32, handler riface.HandleFunc) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32, router riface.IRouter) *Connection {
 	con := &Connection{
-		conn:      conn,
-		ConnID:    connID,
-		isClosed:  false,
-		handleAPI: handler,
-		ExitChan:  make(chan struct{}),
+		conn:     conn,
+		ConnID:   connID,
+		isClosed: false,
+		router:   router,
+		ExitChan: make(chan struct{}),
 	}
 	return con
 }
@@ -44,16 +44,22 @@ func (conn *Connection) StartReader() {
 	// 开始处理业务
 	for {
 		buf := make([]byte, 512)
-		count, err := conn.conn.Read(buf)
+		_, err := conn.conn.Read(buf)
 		if err != nil {
 			fmt.Println("读取数据失败...", err)
 			continue // 继续尝试读取
 		}
-		// 调用业务方法
-		if err := conn.handleAPI(conn.conn, buf, count); err != nil {
-			fmt.Println("业务处理失败...", err, "连接ID为：", conn.ConnID, "客户端地址为： ", conn.RemoteAddr())
-			return
+		// 将客户端的请求消息和对应的连接封装在一起
+		req := Request{
+			conn: conn,
+			data: buf,
 		}
+		// 执行对应连接注册的路由方法(程序员定义的执行方法)
+		go func(req riface.IRequest) {
+			conn.router.PreHandler(req)
+			conn.router.Handler(req)
+			conn.router.PostHandler(req)
+		}(&req)
 	}
 }
 

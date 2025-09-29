@@ -2,7 +2,6 @@ package rnet
 
 import (
 	"Rinx/riface"
-	"errors"
 	"fmt"
 	"net"
 )
@@ -17,16 +16,8 @@ type Server struct {
 	IP string
 	// 服务器监听的端口
 	Port int
-}
-
-// TODO 客户端连接所绑定的处理方法(先写死，后面再修改)
-func CallbackFun(conn *net.TCPConn, data []byte, count int) error {
-	fmt.Println("[conn handler]--CallbackFun...")
-	if _, err := conn.Write(data[:count]); err != nil {
-		fmt.Println("发送数据失败...", err)
-		return errors.New("CallbackFun err...")
-	}
-	return nil
+	// 当前Server由用户行为绑定的回调router，即Server注册的连接对应的处理业务
+	Router riface.IRouter
 }
 
 // 开启
@@ -56,7 +47,7 @@ func (s *Server) Start() {
 				continue
 			}
 			// 将监听到的TCP连接封装到自己构建的连接模块中，便于调用不同的业务方法
-			dealconn := NewConnection(conn, connId, CallbackFun)
+			dealconn := NewConnection(conn, connId, s.Router)
 			connId++
 			// 开启协程进行业务处理
 			go dealconn.Start()
@@ -81,6 +72,11 @@ func (s *Server) Serve() {
 
 }
 
+func (s *Server) AddRouter(router riface.IRouter) {
+	s.Router = router
+	fmt.Println("添加路由成功...")
+}
+
 // 新建Server实现
 func NewServer(name string) riface.IServer {
 	newServer := &Server{
@@ -88,6 +84,7 @@ func NewServer(name string) riface.IServer {
 		IPVersion: "tcp4",
 		IP:        "0.0.0.0",
 		Port:      19991,
+		Router:    nil,
 	}
 	return newServer
 }
