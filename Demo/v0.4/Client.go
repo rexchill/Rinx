@@ -17,7 +17,7 @@ func main() {
 	}
 	for {
 		// 连接成功，传输数v
-		_, err := conn.Write([]byte("Hello Rinx v0.3..."))
+		_, err := conn.Write([]byte("Hello Rinx v0.4..."))
 		if err != nil {
 			fmt.Println("客户端发送数据失败...", err)
 			return

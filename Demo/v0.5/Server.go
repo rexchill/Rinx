@@ -1,0 +1,30 @@
+package main
+
+import (
+	"Rinx/riface"
+	"Rinx/rnet"
+	"fmt"
+)
+
+// PingRouter 程序员写的业务方法
+type PingRouter struct {
+	rnet.BaseRouter
+}
+
+func (r *PingRouter) Handler(request riface.IRequest) {
+	fmt.Println("开始处理业务...")
+	fmt.Println("接收到来自客户端的msgId", request.GetMessage().GetMsgId(), "msgData", string(request.GetData()))
+	err := request.GetConnection().SendMsg(1, []byte("ping成功..."))
+	if err != nil {
+		fmt.Println("业务处理失败...", err)
+	}
+}
+
+func main() {
+	// 创建新的服务器
+	server := rnet.NewServer("[Rinx v0.5]")
+	// 注册路由方法
+	server.AddRouter(&PingRouter{})
+	// 运行服务器
+	server.Serve()
+}

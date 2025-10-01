@@ -20,8 +20,8 @@ type IConnection interface {
 	// RemoteAddr 获取远程客户端的套接字(ip:port)
 	RemoteAddr() net.Addr
 
-	// Send 发送数据给客户端
-	Send(data []byte) error
+	// SendMsg 发送数据给客户端
+	SendMsg(uint32, []byte) error
 }
 
 // HandleFunc 定义一个处理业务的方法

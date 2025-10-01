@@ -1,4 +1,4 @@
-package v0_5
+package datapackageTest
 
 import (
 	"Rinx/rnet"

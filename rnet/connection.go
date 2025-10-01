@@ -2,8 +2,9 @@ package rnet
 
 import (
 	"Rinx/riface"
-	"Rinx/utils"
+	"errors"
 	"fmt"
+	"io"
 	"net"
 )
 
@@ -44,16 +45,38 @@ func (conn *Connection) StartReader() {
 
 	// 开始处理业务
 	for {
-		buf := make([]byte, utils.Config.MaxPacketSize)
-		_, err := conn.conn.Read(buf)
+		// 进行处理的拆包对象
+		pkg := NewDataPackage()
+
+		// 读取头部字段的二进制流
+		header := make([]byte, pkg.GetHeadLen())
+		_, err := io.ReadFull(conn.GetTCPConnection(), header)
 		if err != nil {
-			fmt.Println("读取数据失败...", err)
-			continue // 继续尝试读取
+			fmt.Println("读取pkg头部数据失败...", err)
+			return
 		}
+
+		// 将头部字段数据填入Message，即进行拆包处理
+		msg, err := pkg.UnPack(header)
+		if err != nil {
+			fmt.Println("message头部解析失败...", err)
+		}
+
+		// 根据头部字段中的长度读取对应的数据
+		msgData := make([]byte, msg.GetDataLen())
+		_, err = io.ReadFull(conn.GetTCPConnection(), msgData)
+		if err != nil {
+			fmt.Println("读取数据msgData失败...", err)
+			return
+		}
+
+		// 将msgData数据填入Message
+		msg.SetMsgData(msgData)
+
 		// 将客户端的请求消息和对应的连接封装在一起
 		req := Request{
-			conn: conn,
-			data: buf,
+			conn:    conn,
+			message: msg,
 		}
 		// 执行对应连接注册的路由方法(程序员定义的执行方法)
 		go func(req riface.IRequest) {
@@ -64,6 +87,27 @@ func (conn *Connection) StartReader() {
 	}
 }
 
+func (conn *Connection) SendMsg(msgId uint32, msgData []byte) error {
+	// 连接关闭，给出关闭信息并返回
+	if conn.isClosed {
+		return errors.New("连接已关闭...")
+	}
+
+	// 封包
+	binaryMsg, err := NewDataPackage().Pack(NewMessage(msgId, msgData))
+	if err != nil {
+		fmt.Println("封包失败...", err)
+		return err
+	}
+
+	// 发送给客户端
+	_, err = conn.GetTCPConnection().Write(binaryMsg)
+	if err != nil {
+		fmt.Println("发送二进制数据失败...", err)
+	}
+
+	return nil
+}
 func (conn *Connection) Start() {
 	fmt.Println("连接开始...连接ID为： ", conn.ConnID)
 	// 启动该连接的读业务

@@ -37,7 +37,7 @@ func (r *PingRouter) PostHandler(request riface.IRequest) {
 }
 func main() {
 	// 创建新的服务器
-	server := rnet.NewServer("[Rinx v0.3]")
+	server := rnet.NewServer("[Rinx v0.4]")
 	// 注册路由方法
 	server.AddRouter(&PingRouter{})
 	// 运行服务器

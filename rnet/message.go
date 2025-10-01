@@ -10,6 +10,14 @@ type Message struct {
 	MsgData []byte
 }
 
+func NewMessage(msgId uint32, msgData []byte) *Message {
+	return &Message{
+		MsgId:   msgId,
+		DateLen: uint32(len(msgData)),
+		MsgData: msgData,
+	}
+}
+
 func (m *Message) GetMsgId() uint32 {
 	return m.MsgId
 }

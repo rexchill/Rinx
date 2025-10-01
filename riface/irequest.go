@@ -4,4 +4,5 @@ package riface
 type IRequest interface {
 	GetConnection() IConnection
 	GetData() []byte
+	GetMessage() IMessage
 }
