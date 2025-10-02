@@ -17,8 +17,8 @@ type Server struct {
 	IP string
 	// 服务器监听的端口
 	Port int
-	// 当前Server由用户行为绑定的回调router，即Server注册的连接对应的处理业务
-	Router riface.IRouter
+	// 当前Server的消息管理模块，用来绑定msgId和对应的业务逻辑
+	MsgHandler riface.IMsgHandler
 }
 
 // 开启
@@ -52,7 +52,7 @@ func (s *Server) Start() {
 				continue
 			}
 			// 将监听到的TCP连接封装到自己构建的连接模块中，便于调用不同的业务方法
-			dealconn := NewConnection(conn, connId, s.Router)
+			dealconn := NewConnection(conn, connId, s.MsgHandler)
 			connId++
 			// 开启协程进行业务处理
 			go dealconn.Start()
@@ -77,19 +77,18 @@ func (s *Server) Serve() {
 
 }
 
-func (s *Server) AddRouter(router riface.IRouter) {
-	s.Router = router
-	fmt.Println("添加路由成功...")
+func (s *Server) AddRouter(msgId uint32, router riface.IRouter) {
+	s.MsgHandler.AddRouter(msgId, router)
 }
 
 // 新建Server实现
 func NewServer(name string) riface.IServer {
 	newServer := &Server{
-		Name:      utils.Config.Name,
-		IPVersion: "tcp4",
-		IP:        utils.Config.Host,
-		Port:      utils.Config.Port,
-		Router:    nil,
+		Name:       utils.Config.Name,
+		IPVersion:  "tcp4",
+		IP:         utils.Config.Host,
+		Port:       utils.Config.Port,
+		MsgHandler: NewMsgHandler(),
 	}
 	return newServer
 }

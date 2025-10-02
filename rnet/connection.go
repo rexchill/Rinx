@@ -12,7 +12,7 @@ import (
 type Connection struct {
 
 	// 与客户端进行TCP连接的 连接对象
-	conn *net.TCPConn
+	Conn *net.TCPConn
 
 	// 连接的id
 	ConnID uint32
@@ -20,21 +20,21 @@ type Connection struct {
 	// 当前的连接状态
 	isClosed bool
 
-	// 当前连接所要执行的业务方法
-	router riface.IRouter
+	// 当前连接消息类型对应的所要执行的业务方法
+	MsgHandler riface.IMsgHandler
 
 	// 用于通知当前连接已经退出的 channel
 	ExitChan chan struct{}
 }
 
 // NewConnection 初始化连接模块
-func NewConnection(conn *net.TCPConn, connID uint32, router riface.IRouter) *Connection {
+func NewConnection(conn *net.TCPConn, connID uint32, msgHandler riface.IMsgHandler) *Connection {
 	con := &Connection{
-		conn:     conn,
-		ConnID:   connID,
-		isClosed: false,
-		router:   router,
-		ExitChan: make(chan struct{}),
+		Conn:       conn,
+		ConnID:     connID,
+		isClosed:   false,
+		MsgHandler: msgHandler,
+		ExitChan:   make(chan struct{}),
 	}
 	return con
 }
@@ -79,11 +79,8 @@ func (conn *Connection) StartReader() {
 			message: msg,
 		}
 		// 执行对应连接注册的路由方法(程序员定义的执行方法)
-		go func(req riface.IRequest) {
-			conn.router.PreHandler(req)
-			conn.router.Handler(req)
-			conn.router.PostHandler(req)
-		}(&req)
+		// 根据msgId找到对应注册的方法进行执行
+		go conn.MsgHandler.DoMsgHandler(&req)
 	}
 }
 
@@ -120,7 +117,7 @@ func (conn *Connection) Stop() {
 }
 
 func (conn *Connection) GetTCPConnection() *net.TCPConn {
-	return conn.conn
+	return conn.Conn
 }
 
 func (conn *Connection) GetConnID() uint32 {
@@ -128,7 +125,7 @@ func (conn *Connection) GetConnID() uint32 {
 }
 
 func (conn *Connection) RemoteAddr() net.Addr {
-	return conn.conn.RemoteAddr()
+	return conn.Conn.RemoteAddr()
 }
 
 func (conn *Connection) Send(data []byte) error {

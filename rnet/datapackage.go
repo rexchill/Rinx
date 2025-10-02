@@ -33,6 +33,7 @@ func (pkg *DataPackage) Pack(msg riface.IMessage) ([]byte, error) {
 	}
 
 	// 将message的数据写入
+	// binary.Write 对 []byte 忽略字节序，直接写原始字节；
 	if err := binary.Write(buf, binary.LittleEndian, msg.GetMsgData()); err != nil {
 		return nil, err
 	}
