@@ -29,6 +29,9 @@ func (s *Server) Start() {
 		utils.Config.MaxConnection,
 		utils.Config.MaxPacketSize)
 	go func() {
+		// 0、服务启动前开启线程池，只允许启动一个线程池，即只运行一次
+		s.MsgHandler.StartWorkerPool()
+
 		// 一、获取服务器套接字(ip:port)
 		addr, err := net.ResolveTCPAddr(s.IPVersion, fmt.Sprintf("%s:%d", s.IP, s.Port))
 		if err != nil {

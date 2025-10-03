@@ -2,6 +2,7 @@ package rnet
 
 import (
 	"Rinx/riface"
+	"Rinx/utils"
 	"errors"
 	"fmt"
 	"io"
@@ -83,9 +84,15 @@ func (conn *Connection) StartReader() {
 			conn:    conn,
 			message: msg,
 		}
-		// 执行对应连接注册的路由方法(程序员定义的执行方法)
-		// 根据msgId找到对应注册的方法进行执行
-		go conn.MsgHandler.DoMsgHandler(&req)
+
+		// 配置开启了线程池，发送到任务队列中进行集中处理
+		if utils.Config.WorkerPoolSize > 0 {
+			conn.MsgHandler.SendReqToTaskQueue(&req)
+		} else { // 否则开启新协程进行处理
+			// 执行对应连接注册的路由方法(程序员定义的执行方法)
+			// 根据msgId找到对应注册的方法进行执行
+			go conn.MsgHandler.DoMsgHandler(&req)
+		}
 	}
 }
 

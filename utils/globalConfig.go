@@ -22,6 +22,10 @@ type GlobalConfig struct {
 	MaxPacketSize uint32
 	// 服务器主机允许的最大客户端连接个数
 	MaxConnection int
+	// 协程池的大小
+	WorkerPoolSize uint32
+	// 每个任务队列的容量
+	TaskQueueCapacity uint32
 }
 
 // 定义全局对象，用于传递配置参数
@@ -49,12 +53,14 @@ func (g *GlobalConfig) Reload() {
 func init() {
 	// 默认配置
 	Config = &GlobalConfig{
-		Name:          "RinxServer",
-		Host:          "0.0.0.0",
-		Port:          19991,
-		Version:       "V0.4",
-		MaxPacketSize: 4096,
-		MaxConnection: 1000,
+		Name:              "RinxServer",
+		Host:              "0.0.0.0",
+		Port:              19991,
+		Version:           "V0.7",
+		MaxPacketSize:     4096,
+		MaxConnection:     1000,
+		WorkerPoolSize:    10,
+		TaskQueueCapacity: 1024,
 	}
 
 	// 加载配置文件

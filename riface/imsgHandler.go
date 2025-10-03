@@ -7,4 +7,8 @@ type IMsgHandler interface {
 	DoMsgHandler(request IRequest)
 	// 添加处理逻辑
 	AddRouter(msgId uint32, router IRouter)
+	// 启动协程池
+	StartWorkerPool()
+	// 将request发送到任务队列中
+	SendReqToTaskQueue(request IRequest)
 }
