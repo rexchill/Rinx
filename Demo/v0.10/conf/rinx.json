@@ -1,0 +1,17 @@
+{
+  "Name": "[Rinx demo]",
+
+  "Host": "127.0.0.1",
+
+  "Port": 19991,
+
+  "Version": "V0.10",
+
+  "MaxPacketSize": 4096,
+
+  "MaxConnection": 3,
+
+  "WorkerPoolSize": 10,
+
+  "TaskQueueCapacity": 1024
+}

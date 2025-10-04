@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net"
+	"sync"
 )
 
 // Connection 连接模块
@@ -33,6 +34,11 @@ type Connection struct {
 	// TODO 优化：与连接相关，应该和连接模块相关联
 	// 当前连接属于哪个服务器
 	TcpServer riface.IServer
+
+	// 当前连接的属性集合
+	property map[string]any
+	// 设置属性的互斥锁
+	propertyLock sync.RWMutex
 }
 
 // NewConnection 初始化连接模块
@@ -45,6 +51,7 @@ func NewConnection(server riface.IServer, conn *net.TCPConn, connID uint32, msgH
 		ExitChan:   make(chan struct{}),
 		msgChan:    make(chan []byte),
 		TcpServer:  server,
+		property:   make(map[string]any),
 	}
 	// TODO 优化：添加到连接管理器不应该由连接自身来完成，连接模块是Server的属性，应该由Server来维护
 	// 将当前新建的连接添加到连接模块中
@@ -195,4 +202,28 @@ func (conn *Connection) RemoteAddr() net.Addr {
 
 func (conn *Connection) Send(data []byte) error {
 	return nil
+}
+
+// SetProperty 设置连接属性
+func (conn *Connection) SetProperty(key string, value any) {
+	conn.propertyLock.Lock()
+	defer conn.propertyLock.Unlock()
+	conn.property[key] = value
+}
+
+// GetProperty 获取连接属性
+func (conn *Connection) GetProperty(key string) (any, error) {
+	conn.propertyLock.RLock()
+	defer conn.propertyLock.RUnlock()
+	if value, ok := conn.property[key]; ok {
+		return value, nil
+	}
+	return nil, fmt.Errorf("未找到key [%s] 对应的值", key)
+}
+
+// Remove 移除连接属性
+func (conn *Connection) Remove(key string) {
+	conn.propertyLock.Lock()
+	defer conn.propertyLock.Unlock()
+	delete(conn.property, key)
 }

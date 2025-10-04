@@ -22,6 +22,15 @@ type IConnection interface {
 
 	// SendMsg 发送数据给客户端
 	SendMsg(uint32, []byte) error
+
+	// SetProperty 设置连接属性
+	SetProperty(string, any)
+
+	// GetProperty 获取连接属性
+	GetProperty(string) (any, error)
+
+	// Remove 移除连接属性
+	Remove(string)
 }
 
 // HandleFunc 定义一个处理业务的方法
