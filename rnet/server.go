@@ -7,7 +7,7 @@ import (
 	"net"
 )
 
-// IServer接口实现，定义一个Server的服务器模块
+// Server IServer接口实现，定义一个Server的服务器模块
 type Server struct {
 	// 服务器名称
 	Name string
@@ -19,9 +19,15 @@ type Server struct {
 	Port int
 	// 当前Server的消息管理模块，用来绑定msgId和对应的业务逻辑
 	MsgHandler riface.IMsgHandler
+	// 连接管理模块
+	ConnManager riface.IConnManager
+	// 钩子函数，连接建立时自动实施的方法
+	OnConnStart func(conn riface.IConnection)
+	// 钩子函数，连接关闭时自动实施的方法
+	OnConnStop func(conn riface.IConnection)
 }
 
-// 开启
+// Start 开启Server
 func (s *Server) Start() {
 	fmt.Printf("[START] Server name: %s,listenner at IP: %s, Port %d is starting\n", s.Name, s.IP, s.Port)
 	fmt.Printf("[Rinx] Version: %s, MaxConnection: %d,  MaxPacketSize: %d\n",
@@ -54,23 +60,33 @@ func (s *Server) Start() {
 				fmt.Println("连接客户端失败", err)
 				continue
 			}
+
+			// 判断当前连接个数是否超过了最大连接数，超过了就不允许此次连接了
+			if s.ConnManager.Len() >= utils.Config.MaxConnection {
+				// TODO 关闭连接前可以给用户一些反馈信息
+				fmt.Println("======> 当前连接数过多，请稍后在试...连接个数为： ", s.ConnManager.Len())
+				if err := conn.Close(); err != nil {
+				}
+				continue
+
+			}
 			// 将监听到的TCP连接封装到自己构建的连接模块中，便于调用不同的业务方法
-			dealconn := NewConnection(conn, connId, s.MsgHandler)
+			dealConn := NewConnection(s, conn, connId, s.MsgHandler)
 			connId++
 			// 开启协程进行业务处理
-			go dealconn.Start()
+			go dealConn.Start()
 		}
 	}()
 
 }
 
-// 停止
+// Stop 停止Server
 func (s *Server) Stop() {
-	// TODO 停止服务，做一些资源的释放
-
+	fmt.Println("[Rinx服务器正在关闭...], 服务器名称为： ", s.Name)
+	s.ConnManager.ClearAll()
 }
 
-// 运行
+// Serve 运行Server
 func (s *Server) Serve() {
 	// 启动服务
 	s.Start()
@@ -84,14 +100,45 @@ func (s *Server) AddRouter(msgId uint32, router riface.IRouter) {
 	s.MsgHandler.AddRouter(msgId, router)
 }
 
-// 新建Server实现
+// NewServer 新建Server实现
 func NewServer(name string) riface.IServer {
 	newServer := &Server{
-		Name:       utils.Config.Name,
-		IPVersion:  "tcp4",
-		IP:         utils.Config.Host,
-		Port:       utils.Config.Port,
-		MsgHandler: NewMsgHandler(),
+		Name:        utils.Config.Name,
+		IPVersion:   "tcp4",
+		IP:          utils.Config.Host,
+		Port:        utils.Config.Port,
+		MsgHandler:  NewMsgHandler(),
+		ConnManager: NewConnManager(),
 	}
 	return newServer
+}
+
+func (s *Server) GetConnManager() riface.IConnManager {
+	return s.ConnManager
+}
+
+// SetOnConnStart 设置该Server的连接创建时Hook函数
+func (s *Server) SetOnConnStart(hookFunc func(conn riface.IConnection)) {
+	s.OnConnStart = hookFunc
+}
+
+// SetOnConnStop 设置该Server的连接断开时的Hook函数
+func (s *Server) SetOnConnStop(hookFunc func(conn riface.IConnection)) {
+	s.OnConnStop = hookFunc
+}
+
+// CallOnConnStart 调用连接OnConnStart Hook函数
+func (s *Server) CallOnConnStart(conn riface.IConnection) {
+	if s.OnConnStart != nil {
+		fmt.Println("连接建立时进行的钩子方法...")
+		s.OnConnStart(conn)
+	}
+}
+
+// CallOnConnStop 调用连接OnConnStop Hook函数
+func (s *Server) CallOnConnStop(conn riface.IConnection) {
+	if s.OnConnStop != nil {
+		fmt.Println("连接建立时进行的钩子方法...")
+		s.OnConnStop(conn)
+	}
 }

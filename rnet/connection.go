@@ -29,10 +29,14 @@ type Connection struct {
 
 	// 用于读写协程间的通信
 	msgChan chan []byte
+
+	// TODO 优化：与连接相关，应该和连接模块相关联
+	// 当前连接属于哪个服务器
+	TcpServer riface.IServer
 }
 
 // NewConnection 初始化连接模块
-func NewConnection(conn *net.TCPConn, connID uint32, msgHandler riface.IMsgHandler) *Connection {
+func NewConnection(server riface.IServer, conn *net.TCPConn, connID uint32, msgHandler riface.IMsgHandler) *Connection {
 	con := &Connection{
 		Conn:       conn,
 		ConnID:     connID,
@@ -40,7 +44,13 @@ func NewConnection(conn *net.TCPConn, connID uint32, msgHandler riface.IMsgHandl
 		MsgHandler: msgHandler,
 		ExitChan:   make(chan struct{}),
 		msgChan:    make(chan []byte),
+		TcpServer:  server,
 	}
+	// TODO 优化：添加到连接管理器不应该由连接自身来完成，连接模块是Server的属性，应该由Server来维护
+	// 将当前新建的连接添加到连接模块中
+	server.GetConnManager().Add(con)
+	fmt.Println("======> 连接添加到连接管理器成功，当前连接个数为： ", server.GetConnManager().Len())
+
 	return con
 }
 func (conn *Connection) StartReader() {
@@ -140,6 +150,9 @@ func (conn *Connection) Start() {
 	go conn.StartReader()
 	// 启动该连接的写业务
 	go conn.StartWriter()
+
+	// 开始对新建立的连接执行注册的钩子方法
+	conn.TcpServer.CallOnConnStart(conn)
 }
 
 func (conn *Connection) Stop() {
@@ -148,6 +161,10 @@ func (conn *Connection) Stop() {
 	if conn.isClosed {
 		return
 	}
+
+	// 开始对将要关闭的连接执行注册的钩子方法
+	conn.TcpServer.CallOnConnStop(conn)
+
 	// 否则，置关闭标识
 	conn.isClosed = true
 	// 服务端关闭连接
@@ -156,6 +173,9 @@ func (conn *Connection) Stop() {
 	}
 	// 告知Writer连接已关闭
 	conn.ExitChan <- struct{}{}
+	// TODO 优化：移除连接管理器中的连接也不应该由连接自身来实现
+	// 从连接模块中移除当前连接
+	conn.TcpServer.GetConnManager().Remove(conn)
 	// 回收资源
 	close(conn.ExitChan)
 	close(conn.msgChan)

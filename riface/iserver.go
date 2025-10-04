@@ -1,12 +1,22 @@
 package riface
 
 type IServer interface {
-	// 启动服务器
+	// Start 启动服务器
 	Start()
-	// 停止服务器
+	// Stop 停止服务器
 	Stop()
-	// 运行服务器
+	// Serve 运行服务器
 	Serve()
-	// 路由功能，给当前服务注册一个路由业务方法，供客户端连接使用
+	// AddRouter 路由功能，给当前服务注册一个路由业务方法，供客户端连接使用
 	AddRouter(msgId uint32, router IRouter)
+	// GetConnManager 连接管理模块
+	GetConnManager() IConnManager
+	// SetOnConnStart 设置该Server的连接创建时Hook函数
+	SetOnConnStart(func(IConnection))
+	// SetOnConnStop 设置该Server的连接断开时的Hook函数
+	SetOnConnStop(func(IConnection))
+	// CallOnConnStart 调用连接OnConnStart Hook函数
+	CallOnConnStart(conn IConnection)
+	// CallOnConnStop 调用连接OnConnStop Hook函数
+	CallOnConnStop(conn IConnection)
 }
